@@ -1,17 +1,22 @@
-import lightgbm as lgb
 import pickle
+
 from sklearn.metrics import roc_auc_score
 
+from src.preprocessing import feature_engineering
 from src.utils import helpers, configs
 
 
 def infer_lgb(fold):
-    base_feats = ['content_id', 'content_type_id', 'task_container_id', 'user_answer',
-                  'prior_question_elapsed_time', 'prior_question_had_explanation', 'part']
+    feats = ['content_id', 'task_container_id', 'prior_question_elapsed_time', 'prior_question_had_explanation', 'part',
+             'content_id_target_mean']
+    target = 'answered_correctly'
     xtrn, ytrn = helpers.load_base_features(fold, mode='train')
     xval, yval = helpers.load_base_features(fold, mode='val')
 
-    infer(xval, yval, base_feats, fold)
+    # get features
+    xtrn, xval = feature_engineering.get_global_stats(xtrn, xval, target)
+
+    infer(xval, yval, feats, fold)
 
 
 def infer(xval, yval, feats, fold):

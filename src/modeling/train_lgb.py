@@ -1,21 +1,28 @@
-import lightgbm as lgb
-from sklearn.metrics import roc_auc_score
-import matplotlib.pyplot as plt
 import pickle
 
-from src.utils import helpers
+import lightgbm as lgb
+import matplotlib.pyplot as plt
+from sklearn.metrics import roc_auc_score
+
+from src.preprocessing import feature_engineering
 from src.utils import configs
+from src.utils import helpers
 
 
 def train_lgb_fold(fold):
     # get base features
-    base_feats = ['content_id', 'content_type_id', 'task_container_id', 'user_answer',
-                  'prior_question_elapsed_time', 'prior_question_had_explanation', 'part']
+    feats = ['content_id', 'task_container_id', 'prior_question_elapsed_time', 'prior_question_had_explanation', 'part',
+             'content_id_target_mean']
+    target = 'answered_correctly'
     xtrn, ytrn = helpers.load_base_features(fold, mode='train')
     xval, yval = helpers.load_base_features(fold, mode='val')
 
+    # get features
+    xtrn, xval = feature_engineering.get_global_stats(xtrn, xval, target)
+    # get row wise user stats etc --> up to point of row
+
     # train model on single fold
-    model = train(xtrn, ytrn, xval, yval, base_feats)
+    model = train(xtrn, ytrn, xval, yval, feats)
 
     # save to disk
     path = configs.model_dir / 'lgb_fold{}.dat'.format(fold)
