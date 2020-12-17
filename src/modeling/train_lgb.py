@@ -12,14 +12,15 @@ from src.utils import helpers
 def train_lgb_fold(fold):
     # get base features
     feats = ['content_id', 'task_container_id', 'prior_question_elapsed_time', 'prior_question_had_explanation', 'part',
-             'content_id_target_mean']
+             'content_id_target_mean', 'user_count', 'user_correct_mean', 'user_question_count',
+             'user_question_correct_mean']
     target = 'answered_correctly'
     xtrn, ytrn = helpers.load_base_features(fold, mode='train')
     xval, yval = helpers.load_base_features(fold, mode='val')
 
     # get features
     xtrn, xval = feature_engineering.get_global_stats(xtrn, xval, target)
-    # get row wise user stats etc --> up to point of row
+    xtrn, xval = feature_engineering.get_user_feats(xtrn, xval)
 
     # train model on single fold
     model = train(xtrn, ytrn, xval, yval, feats)
