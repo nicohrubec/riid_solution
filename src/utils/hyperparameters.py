@@ -1,8 +1,8 @@
 
 # validation ratios
 nfolds = 5
-usage_fold = .5
-holdout_fold = .3
+usage_fold = 1
+holdout_fold = .15
 unseen_fold = .5
 
 # modeling

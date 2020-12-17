@@ -1,12 +1,11 @@
-import pandas as pd
-import numpy as np
-from tqdm import tqdm
-from sklearn.model_selection import GroupKFold
-import random
 import gc
+import random
+
+import pandas as pd
+from sklearn.model_selection import GroupKFold
 
 from src.utils import configs
-from src.utils.hyperparameters import nfolds, usage_fold, holdout_fold, unseen_fold
+from src.utils.hyperparameters import nfolds, usage_fold, holdout_fold
 
 
 # splits the master df into 5 folds by user
@@ -31,7 +30,8 @@ def split_to_folds():
         print("Shape: {}".format(fold_data.shape))
 
         fold_path = configs.data_dir / ('fold'+str(fold)+'.csv')
-        fold_data.to_csv(fold_path, index=False)
+        fold_pickle_path = configs.data_dir / ('fold'+str(fold)+'.pkl')
+        fold_data.to_csv(fold_path, index=False); fold_data.to_pickle(fold_pickle_path)
 
 
 def rand_time(max_time_stamp_all_users, max_time_stamp_user):
@@ -93,7 +93,8 @@ def split_fold(fold):
 
     # save
     train_path = configs.data_dir / ('fold' + str(fold) + '_train.csv')
-    train.to_csv(train_path, index=False)
+    train_pickle_path = configs.data_dir / ('fold' + str(fold) + '_train.pkl')
+    train.to_csv(train_path, index=False); train.to_pickle(train_pickle_path)
     val_path = configs.data_dir / ('fold' + str(fold) + '_val.csv')
     val.to_csv(val_path, index=False)
 
