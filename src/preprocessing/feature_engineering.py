@@ -46,9 +46,9 @@ def get_global_stats(trn, val, target):
 
 
 def update_dicts(row, count_dict, correct_dict):
-    user = row[0]
-    question = row[1]
-    correct = row[2]
+    user = int(row[0])
+    question = int(row[1])
+    correct = int(row[2])
 
     if user in count_dict:  # known user
         count_dict[user]['sum'] += 1
@@ -69,8 +69,8 @@ def update_dicts(row, count_dict, correct_dict):
 
 def get_row_values(row, count_dict, correct_dict):
     feats = np.zeros(4)
-    user = row[0]
-    question = row[1]
+    user = int(row[0])
+    question = int(row[1])
 
     if user in count_dict:  # known user
         feats[0] = count_dict[user]['sum']
