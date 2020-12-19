@@ -114,6 +114,7 @@ def calc_feats_from_stats(df, user_feats):
     df['user_question_correct_mean'] = user_feats[:, 3]
     df['last_time_user'] = user_feats[:, 4]
     df['last_time_question_user'] = user_feats[:, 5]
+    df['last_time_user_inter'] = df['last_time_user'] - df['last_time_question_user']
 
     return df
 
