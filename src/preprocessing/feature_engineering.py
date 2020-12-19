@@ -91,6 +91,20 @@ def get_row_values(row, count_dict, correct_dict):
     return feats
 
 
+def calc_feats_from_stats(df, user_feats):
+    # assign computed features to new columns in the df
+    user_feats[:, 1] = user_feats[:, 1] / user_feats[:, 0]
+    user_feats[:, 3] = user_feats[:, 3] / user_feats[:, 2]
+
+    df['user_count'] = user_feats[:, 0]
+    df['user_correct_mean'] = user_feats[:, 1]
+    df['user_question_count'] = user_feats[:, 2]
+    user_feats[:, 3][user_feats[:, 3] == -np.inf] = 0
+    df['user_question_correct_mean'] = user_feats[:, 3]
+
+    return df
+
+
 def calc_dicts_and_add(df, count_dict=None, correct_dict=None):
     # init empty dicts if nothing is provided
     if not count_dict:
@@ -117,15 +131,8 @@ def calc_dicts_and_add(df, count_dict=None, correct_dict=None):
 
         prev_row = curr_row
 
-    # assign computed features to new columns in the df
-    user_feats[:, 1] = user_feats[:, 1] / user_feats[:, 0]
-    user_feats[:, 3] = user_feats[:, 3] / user_feats[:, 2]
-
-    df['user_count'] = user_feats[:, 0]
-    df['user_correct_mean'] = user_feats[:, 1]
-    df['user_question_count'] = user_feats[:, 2]
-    user_feats[:, 3][user_feats[:, 3] == -np.inf] = 0
-    df['user_question_correct_mean'] = user_feats[:, 3]
+    # calculate and add features from preprocessed stat dicts
+    df = calc_feats_from_stats(df, user_feats)
 
     return df, count_dict, correct_dict
 
