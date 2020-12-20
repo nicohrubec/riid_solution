@@ -11,7 +11,7 @@ def replace_bools(df):
     return df
 
 
-def load_base_features(fold, mode):
+def load_base_features(fold, mode, tail=False):
     if mode == 'train':
         fold_path = configs.data_dir / 'fold{}_train.csv'.format(fold)
     elif mode == 'val':
@@ -19,6 +19,12 @@ def load_base_features(fold, mode):
 
     df = pd.read_csv(fold_path)
     df = df[df.answered_correctly != -1]
+
+    # only train on tails of user histories
+    if tail:
+        if mode == 'train':
+            df = df.groupby('user_id').tail(1000)
+
     target = df['answered_correctly']
     df = replace_bools(df)
 
