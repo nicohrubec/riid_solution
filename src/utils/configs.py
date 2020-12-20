@@ -4,6 +4,7 @@ from pathlib import Path
 project_dir = Path.cwd().parent
 data_dir = project_dir / 'data'
 model_dir = project_dir / 'models'
+oof_dir = project_dir / 'oof'
 
 train_file = data_dir / 'train.csv'
 questions_file = data_dir / 'questions.csv'

@@ -1,5 +1,6 @@
 import pickle
 
+import numpy as np
 from sklearn.metrics import roc_auc_score
 
 from src.preprocessing import feature_engineering
@@ -18,12 +19,16 @@ def infer_lgb(fold):
     xtrn, xval = feature_engineering.get_global_stats(xtrn, xval, target)
     xtrn, xval = feature_engineering.get_user_feats(xtrn, xval)
 
-    infer(xval, yval, feats, fold)
+    oof = infer(xval, yval, feats, fold)
+    oof_path = configs.oof_dir / 'oof.npy'
+    np.save(oof_path, oof)
 
 
 def infer(xval, yval, feats, fold):
-    model_path = configs.model_dir / 'lgb_7760_all_fold0{}.dat'.format(fold)
+    model_path = configs.model_dir / 'lgb_7760_all_fold{}.dat'.format(fold)
     model = pickle.load(open(model_path, "rb"))
 
     val_preds = model.predict(xval[feats])
     print('auc:', roc_auc_score(yval, val_preds))
+
+    return val_preds
