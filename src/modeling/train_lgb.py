@@ -35,12 +35,12 @@ def train(xtrain, ytrain, xval, yval, feats, plot=False):
     lgb_valid = lgb.Dataset(xval[feats], yval)
 
     model = lgb.train(
-        {'objective': 'binary'},
+        {'objective': 'binary', 'learning_rate': 0.2, 'feature_fraction': .9},
         lgb_train,
         valid_sets=[lgb_train, lgb_valid],
         verbose_eval=100,
         num_boost_round=10000,
-        early_stopping_rounds=10,
+        early_stopping_rounds=50,
     )
 
     preds = model.predict(xval[feats])
