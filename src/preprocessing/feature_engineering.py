@@ -1,3 +1,5 @@
+import gc
+
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
@@ -156,6 +158,7 @@ def calc_dicts_and_add(df, count_dict=None, correct_dict=None, time_dict=None):
 def get_user_feats(trn, val):
     trn, count_dict, correct_dict, time_dict = calc_dicts_and_add(trn)
     val, count_dict, correct_dict, time_dict = calc_dicts_and_add(val, count_dict, correct_dict, time_dict)
+    del count_dict, correct_dict, time_dict
+    gc.collect()
 
     return trn, val
-

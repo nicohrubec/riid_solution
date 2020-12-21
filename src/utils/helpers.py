@@ -46,8 +46,9 @@ def load_base_features(fold, mode, tail=True, full=True):
     # only train on tails of user histories
     if tail:
         if mode == 'train':
-            df = df.groupby('user_id').tail(1000)
-            print(df.shape)
+            if not full:
+                df = df.groupby('user_id').tail(1000)
+                print(df.shape)
 
     target = df['answered_correctly']
     df = replace_bools(df)

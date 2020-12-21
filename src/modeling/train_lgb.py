@@ -2,6 +2,7 @@ import pickle
 
 import lightgbm as lgb
 import matplotlib.pyplot as plt
+import numpy as np
 from sklearn.metrics import roc_auc_score
 
 from src.preprocessing import feature_engineering
@@ -31,8 +32,10 @@ def train_lgb_fold(fold):
 
 
 def train(xtrain, ytrain, xval, yval, feats, plot=False):
-    lgb_train = lgb.Dataset(xtrain[feats], ytrain)
-    lgb_valid = lgb.Dataset(xval[feats], yval)
+    xtrain = xtrain[feats].values.astype(np.float32)
+    xval = xval[feats].values.astype(np.float32)
+    lgb_train = lgb.Dataset(xtrain, ytrain)
+    lgb_valid = lgb.Dataset(xval, yval)
 
     model = lgb.train(
         {'objective': 'binary', 'learning_rate': 0.2, 'feature_fraction': .9},
@@ -43,7 +46,7 @@ def train(xtrain, ytrain, xval, yval, feats, plot=False):
         early_stopping_rounds=50,
     )
 
-    preds = model.predict(xval[feats])
+    preds = model.predict(xval)
     print('auc:', roc_auc_score(yval, preds))
 
     # show feature importances
