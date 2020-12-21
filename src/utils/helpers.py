@@ -28,27 +28,50 @@ def add_remaining_data(df, fold):
     return df
 
 
-def load_base_features(fold, mode, tail=True, full=True):
+def filter_train(df, fold):
+    val_path = configs.data_dir / 'fold{}_val.csv'.format(fold)
+    val = pd.read_csv(val_path)
+
+    val_rows = val.row_id.unique()
+    df = df[~df.row_id.isin(val_rows)]
+
+    return df
+
+
+def load_base_features(fold, mode, tail=True, full=False):
     if mode == 'train':
-        fold_path = configs.data_dir / 'fold{}_train.csv'.format(fold)
+        if not full:
+            fold_path = configs.data_dir / 'fold{}_train.csv'.format(fold)
+        else:
+            fold_path = configs.all_data_file
     elif mode == 'val':
         fold_path = configs.data_dir / 'fold{}_val.csv'.format(fold)
 
-    df = pd.read_csv(fold_path)
-
-    if mode == 'train':
-        if full:
-            df = add_remaining_data(df, fold=fold)
-
+    df = pd.read_csv(fold_path,
+                     dtype={
+                         'timestamp': 'int64',
+                         'user_id': 'int32',
+                         'content_id': 'int16',
+                         'content_type_id': 'int8',
+                         'answered_correctly': 'int8',
+                         'prior_question_elapsed_time': 'float32',
+                         'prior_question_had_explanation': 'boolean',
+                         'task_container_id': 'int16',
+                         'user_answer': 'int8'
+                     })
+    print(df.shape)
     df = df[df.answered_correctly != -1]
     print(df.shape)
 
-    # only train on tails of user histories
     if tail:
         if mode == 'train':
-            if not full:
-                df = df.groupby('user_id').tail(1000)
-                print(df.shape)
+            df = df.groupby('user_id').tail(1000)
+    print(df.shape)
+
+    if mode == 'train':
+        if full:
+            df = filter_train(df, fold=fold)
+            print(df.shape)
 
     target = df['answered_correctly']
     df = replace_bools(df)
