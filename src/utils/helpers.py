@@ -1,7 +1,6 @@
 import pandas as pd
 
 from src.utils import configs
-from src.utils import hyperparameters as hp
 
 
 def replace_bools(df):
@@ -9,22 +8,6 @@ def replace_bools(df):
         {False: 0, True: 1}
     )
 
-    return df
-
-
-def add_remaining_data(df, fold):
-    for i in range(hp.nfolds):
-        print("Add data for fold {}".format(i))
-        print(df.shape)
-        if i == fold:
-            continue
-        fold_path = configs.data_dir / 'fold{}.csv'.format(fold)
-        fold_df = pd.read_csv(fold_path)
-        fold_df = fold_df.groupby('user_id').tail(1000)
-
-        df = df.append(fold_df)
-
-    del fold_df
     return df
 
 
@@ -59,19 +42,22 @@ def load_base_features(fold, mode, tail=True, full=False):
                          'task_container_id': 'int16',
                          'user_answer': 'int8'
                      })
+
+    print("Load {}: ".format(mode), df.shape)
     print(df.shape)
+
     df = df[df.answered_correctly != -1]
-    print(df.shape)
+    print("Exclude lectures: ", df.shape)
 
     if tail:
         if mode == 'train':
             df = df.groupby('user_id').tail(1000)
-    print(df.shape)
+            print("Pick user history tails: ", df.shape)
 
     if mode == 'train':
         if full:
             df = filter_train(df, fold=fold)
-            print(df.shape)
+            print("Filter valdiation data from train: ", df.shape)
 
     target = df['answered_correctly']
     df = replace_bools(df)
