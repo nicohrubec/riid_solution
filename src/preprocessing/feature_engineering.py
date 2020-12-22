@@ -1,8 +1,11 @@
 import gc
+import pickle
 
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
+
+from src.utils import configs
 
 
 def get_and_merge_feat(trn, target, feat):
@@ -33,7 +36,7 @@ def merge_feat_val(key_feat, feat_dict):
     return add_feat
 
 
-def get_global_stats(trn, val, target):
+def get_global_stats(trn, val, target, save_dicts=True):
     # compute stats merge on train and obtain state dicts for test merge
     trn, content_dict = get_and_merge_feat(trn, target, 'content_id')
     # trn, part_dict = get_and_merge_feat(trn, target, 'part')
@@ -43,6 +46,11 @@ def get_global_stats(trn, val, target):
     val['content_id_target_mean'] = merge_feat_val(val['content_id'], content_dict)
     # val['part_target_mean'] = merge_feat_val(val['part'], part_dict)
     # val['task_container_id_target_mean'] = merge_feat_val(val['task_container_id'], task_dict)
+
+    if save_dicts:
+        print("Save content dict ...")
+        with open(configs.content_dict_path, 'wb') as f:
+            pickle.dump(content_dict, f, pickle.HIGHEST_PROTOCOL)
 
     return trn, val
 
@@ -155,9 +163,21 @@ def calc_dicts_and_add(df, count_dict=None, correct_dict=None, time_dict=None):
     return df, count_dict, correct_dict, time_dict
 
 
-def get_user_feats(trn, val):
+def get_user_feats(trn, val, save_dicts=True):
     trn, count_dict, correct_dict, time_dict = calc_dicts_and_add(trn)
     val, count_dict, correct_dict, time_dict = calc_dicts_and_add(val, count_dict, correct_dict, time_dict)
+
+    if save_dicts:
+        print("Save count dict ...")
+        with open(configs.count_dict_path, 'wb') as f:
+            pickle.dump(count_dict, f, pickle.HIGHEST_PROTOCOL)
+        print("Save correct dict ...")
+        with open(configs.correct_dict_path, 'wb') as f:
+            pickle.dump(correct_dict, f, pickle.HIGHEST_PROTOCOL)
+        print("Save time dict ...")
+        with open(configs.time_dict_path, 'wb') as f:
+            pickle.dump(time_dict, f, pickle.HIGHEST_PROTOCOL)
+
     del count_dict, correct_dict, time_dict
     gc.collect()
 

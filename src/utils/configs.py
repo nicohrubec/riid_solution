@@ -11,4 +11,7 @@ questions_file = data_dir / 'questions.csv'
 lectures_file = data_dir / 'lectures.csv'
 all_data_file = data_dir / 'train_all.csv'
 
-
+count_dict_path = data_dir / 'count_dict.pkl'
+correct_dict_path = data_dir / 'correct_dict.pkl'
+content_dict_path = data_dir / 'content_dict.pkl'
+time_dict_path = data_dir / 'time_dict.pkl'
