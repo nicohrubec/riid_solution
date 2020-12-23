@@ -117,14 +117,15 @@ def calc_feats_from_stats(df, user_feats):
     user_feats[:, 1] = user_feats[:, 1] / user_feats[:, 0]
     user_feats[:, 3] = user_feats[:, 3] / user_feats[:, 2]
 
-    df['user_count'] = user_feats[:, 0]
-    df['user_correct_mean'] = user_feats[:, 1]
-    df['user_question_count'] = user_feats[:, 2]
+    df['user_count'] = user_feats[:, 0].astype(np.float32)
+    df['user_correct_mean'] = user_feats[:, 1].astype(np.float32)
+    df['user_question_count'] = user_feats[:, 2].astype(np.float32)
     user_feats[:, 3][user_feats[:, 3] == -np.inf] = 0
-    df['user_question_correct_mean'] = user_feats[:, 3]
-    df['last_time_user'] = user_feats[:, 4]
-    df['last_time_question_user'] = user_feats[:, 5]
-    df['last_time_user_inter'] = df['last_time_user'] - df['last_time_question_user']
+    df['user_question_correct_mean'] = user_feats[:, 3].astype(np.float32)
+    df['last_time_user'] = user_feats[:, 4].astype(np.float32)
+    df['last_time_question_user'] = user_feats[:, 5].astype(np.float32)
+    df['last_time_user_inter'] = df['last_time_user'].astype(np.float32) - df['last_time_question_user'].astype(
+        np.float32)
 
     return df
 
