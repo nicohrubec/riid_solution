@@ -16,7 +16,7 @@ def get_and_merge_feat(trn, target, feat):
     trn = pd.merge(trn, mean, on=feat, how='left')
 
     # transform df to dict for test merge
-    feat_dict = mean.to_dict()[feat_name]
+    feat_dict = mean.astype('float32').to_dict()[feat_name]
 
     return trn, feat_dict
 
@@ -36,7 +36,7 @@ def merge_feat_val(key_feat, feat_dict):
     return add_feat
 
 
-def get_global_stats(trn, val, target, save_dicts=True):
+def get_global_stats(trn, val, target, save_dicts=False):
     # compute stats merge on train and obtain state dicts for test merge
     trn, content_dict = get_and_merge_feat(trn, target, 'content_id')
     # trn, part_dict = get_and_merge_feat(trn, target, 'part')
@@ -164,7 +164,7 @@ def calc_dicts_and_add(df, count_dict=None, correct_dict=None, time_dict=None):
     return df, count_dict, correct_dict, time_dict
 
 
-def get_user_feats(trn, val, save_dicts=True):
+def get_user_feats(trn, val, save_dicts=False):
     trn, count_dict, correct_dict, time_dict = calc_dicts_and_add(trn)
     val, count_dict, correct_dict, time_dict = calc_dicts_and_add(val, count_dict, correct_dict, time_dict)
 

@@ -25,10 +25,10 @@ def infer_lgb(fold):
 
 
 def infer(xval, yval, feats, fold):
-    model_path = configs.model_dir / 'lgb_7760_all_fold{}.dat'.format(fold)
+    model_path = configs.model_dir / 'lgb_7791_full_fold{}.dat'.format(fold)
     model = pickle.load(open(model_path, "rb"))
 
-    val_preds = model.predict(xval[feats])
+    val_preds = model.predict(xval[feats].values.astype(np.float32))
     print('auc:', roc_auc_score(yval, val_preds))
 
     return val_preds
