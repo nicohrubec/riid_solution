@@ -170,6 +170,9 @@ def calc_dicts_and_add(df, count_dict=None, correct_dict=None, time_dict=None, l
 
         prev_row = curr_row
 
+    del df['user_answer']
+    del df['timestamp']
+    del df['user_id']
     # calculate and add features from preprocessed stat dicts
     df = calc_feats_from_stats(df, user_feats)
 

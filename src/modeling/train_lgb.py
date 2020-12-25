@@ -39,7 +39,7 @@ def train(xtrain, ytrain, xval, yval, feats, plot=False):
     lgb_valid = lgb.Dataset(xval, yval)
 
     model = lgb.train(
-        {'objective': 'binary', 'learning_rate': 0.2, 'feature_fraction': .9},
+        {'objective': 'binary', 'learning_rate': 0.2, 'feature_fraction': .9, 'num_leaves': 150},
         lgb_train,
         valid_sets=[lgb_train, lgb_valid],
         verbose_eval=100,
