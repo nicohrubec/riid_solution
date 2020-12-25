@@ -199,3 +199,19 @@ def get_user_feats(trn, val, save_dicts=False):
     gc.collect()
 
     return trn, val
+
+
+def get_answer_feats(trn, val):
+    answer_counts = trn.groupby('content_id')['user_answer'].value_counts(normalize=True)
+
+    answer_counts_unstack = answer_counts.unstack().reset_index(drop=True).astype(np.float32)
+    answer_counts_unstack.columns = ['answer1', 'answer2', 'answer3', 'answer4']
+    answer_counts_unstack = answer_counts_unstack.rename_axis('content_id').reset_index()
+    answers = answer_counts_unstack.values[:, -4:].astype(np.float32)
+    answers.sort(axis=1)
+    answer_counts_unstack[['answer1', 'answer2', 'answer3', 'answer4']] = answers
+
+    trn = pd.merge(trn, answer_counts_unstack, how='left', on='content_id')
+    val = pd.merge(val, answer_counts_unstack, how='left', on='content_id')
+
+    return trn, val
