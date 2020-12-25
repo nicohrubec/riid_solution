@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 
 from src.utils import configs
@@ -7,6 +8,7 @@ def replace_bools(df):
     df.loc[:, 'prior_question_had_explanation'] = df.loc[:, 'prior_question_had_explanation'].map(
         {False: 0, True: 1}
     )
+    df['prior_question_had_explanation'] = df['prior_question_had_explanation'].astype(np.float16)
 
     return df
 
@@ -40,7 +42,8 @@ def load_base_features(fold, mode, tail=False, full=True):
                          'prior_question_elapsed_time': 'float32',
                          'prior_question_had_explanation': 'boolean',
                          'task_container_id': 'int16',
-                         'user_answer': 'int8'
+                         'user_answer': 'int8',
+                         'part': 'int8'
                      })
 
     print("Load {}: ".format(mode), df.shape)

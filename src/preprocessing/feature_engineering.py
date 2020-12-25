@@ -14,6 +14,7 @@ def get_and_merge_feat(trn, target, feat):
     mean = trn[[feat, target]].groupby([feat]).agg(['mean'])
     mean.columns = [feat_name]
     trn = pd.merge(trn, mean, on=feat, how='left')
+    trn[feat_name] = trn[feat_name].astype(np.float32)
 
     # transform df to dict for test merge
     feat_dict = mean.astype('float32').to_dict()[feat_name]
@@ -173,6 +174,8 @@ def calc_dicts_and_add(df, count_dict=None, correct_dict=None, time_dict=None, l
     del df['user_answer']
     del df['timestamp']
     del df['user_id']
+    del df['tags']
+    del df['row_id']
     # calculate and add features from preprocessed stat dicts
     df = calc_feats_from_stats(df, user_feats)
 
@@ -210,6 +213,7 @@ def get_answer_feats(trn, val):
     answers = answer_counts_unstack.values[:, -4:].astype(np.float32)
     answers.sort(axis=1)
     answer_counts_unstack[['answer1', 'answer2', 'answer3', 'answer4']] = answers
+    answer_counts_unstack = answer_counts_unstack.astype(np.float32)
 
     trn = pd.merge(trn, answer_counts_unstack, how='left', on='content_id')
     val = pd.merge(val, answer_counts_unstack, how='left', on='content_id')
