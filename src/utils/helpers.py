@@ -23,7 +23,7 @@ def filter_train(df, fold):
     return df
 
 
-def load_base_features(fold, mode, tail=False, full=True):
+def load_base_features(fold, mode, tail=False, full=False):
     if mode == 'train':
         if not full:
             fold_path = configs.data_dir / 'fold{}_train.csv'.format(fold)
