@@ -46,6 +46,9 @@ def load_base_features(fold, mode, tail=False, full=False):
                          'part': 'int8'
                      })
 
+    del df['content_type_id']
+    del df['tags']
+
     print("Load {}: ".format(mode), df.shape)
     print(df.shape)
 
