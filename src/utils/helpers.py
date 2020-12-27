@@ -1,7 +1,16 @@
 import numpy as np
 import pandas as pd
+import torch
+import torch.backends.cudnn
 
 from src.utils import configs
+
+
+def set_seed(seed):
+    torch.manual_seed(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    np.random.seed(seed)
 
 
 def replace_bools(df):
@@ -44,7 +53,7 @@ def load_base_features(fold, mode, tail=False, full=False):
                          'task_container_id': 'int16',
                          'user_answer': 'int8',
                          'part': 'int8'
-                     })
+                     })[:10000]
 
     del df['content_type_id']
     del df['tags']
