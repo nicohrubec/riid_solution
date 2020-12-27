@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 from torch.utils.data import Dataset
 
 
@@ -15,13 +16,11 @@ class TransformerDataset(Dataset):
             # get features for user
             user_q, user_a = self.group[user]
             user_seq_len = len(user_q)
-            user_pos = [pos for pos in range(user_seq_len)]
-            user_seq = np.zeros((self.num_feats + 1, user_seq_len), dtype=np.float32)
+            user_seq = np.zeros((self.num_feats, user_seq_len), dtype=np.float32)
 
             # assign feats to user array and master user list
             user_seq[0] = user_a
             user_seq[1] = user_q
-            user_seq[2] = user_pos
             self.samples[user] = user_seq
 
             # get master user id list for sampling
@@ -53,8 +52,10 @@ class TransformerDataset(Dataset):
 
         # get user history and sample to be predicted + target for row
         sample_data = self.samples[user][:, :row_id]
-        sample_history = np.zeros((self.num_feats + 1, self.max_seq), dtype=np.float32)
-        sample_history[:, :row_id] = sample_data
+        sample_history = np.zeros((self.num_feats, self.max_seq), dtype=np.float32)
+        sample_history[:self.num_feats, :row_id] = sample_data[:, -100:]
+        position = np.zeros(self.max_seq, dtype=np.int16)
+        position[:row_id] = [pos for pos in range(min(self.max_seq, row_id), 0, -1)]
         sample = self.samples[user][1:, row_id]
         target = self.samples[user][0, row_id]
 
@@ -62,4 +63,9 @@ class TransformerDataset(Dataset):
         mask = np.zeros(self.max_seq, dtype=np.int8)
         mask[:row_id] = 1
 
-        return sample_history, sample, target, mask
+        sample_history = torch.from_numpy(sample_history).float()
+        sample = torch.from_numpy(sample).float()
+        position = torch.from_numpy(position).long()
+        mask = torch.from_numpy(mask).bool()
+
+        return sample_history, sample, position, target, mask
