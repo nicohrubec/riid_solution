@@ -43,7 +43,7 @@ class Transformer(nn.Module):
         history = torch.add(history, pos_history)
         history = history.permute(1, 0, 2)
 
-        history = self.transformer(history, src_key_padding_mask=mask)
+        history = self.transformer(history)
         history = history.permute(1, 2, 0)
         history = self.avgpool(history).squeeze()
 
@@ -52,7 +52,7 @@ class Transformer(nn.Module):
         # get position embedding?
 
         # head
-        out = torch.cat((history, q_sample), axis=1)
+        out = torch.cat((history, q_sample), dim=1)
         out = self.out1(out)
         out = self.out2(out)
 
