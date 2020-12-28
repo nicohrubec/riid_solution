@@ -1,11 +1,13 @@
 import numpy as np
 import pandas as pd
 from sklearn.metrics import roc_auc_score
+import datetime
 
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
+from torch.utils.tensorboard import SummaryWriter
 
 from src.utils import helpers, configs
 from src.utils import hyperparameters as hp
@@ -15,7 +17,7 @@ from src.modeling.transformer import Transformer
 
 def train_epoch(model, loader, optimizer, device, criterion):
     model.train()
-    epoch_loss = {'train': 0.0, 'val': 0.0}
+    train_loss = 0.0
 
     for i, (history, sample, positions, target, mask) in enumerate(loader):
         if i > 0: break
@@ -51,7 +53,7 @@ def train_transformer_fold(fold):
     train_set = TransformerDataset(trn_group)
     val_set = TransformerDataset(val_group)
 
-    train_loader = DataLoader(train_set, batch_size=hp.batch_size, shuffle=True)
+    train_loader = DataLoader(train_set, batch_size=hp.batch_size, shuffle=False)
     val_loader = DataLoader(val_set, batch_size=hp.val_batch_size, shuffle=False)
 
     criterion = nn.BCEWithLogitsLoss()
@@ -61,7 +63,16 @@ def train_transformer_fold(fold):
 
     checkpoint_path = configs.model_dir / 'transformer'
     best_loss = {'train': np.inf, 'val': np.inf}
+    log_dir = configs.log_dir / datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    writer = SummaryWriter(log_dir=log_dir)
 
     for epoch in range(hp.nepochs):
+        print(f"Train epoch {epoch}")
         epoch_path = checkpoint_path / f'fold{fold}_epoch{epoch}'
-        model = train_epoch(model, train_loader, optimizer, device, criterion)
+        model, loss = train_epoch(model, train_loader, optimizer, device, criterion)
+
+        writer.add_scalar("Train loss", loss, epoch)
+        print(f"Train loss: {loss}")
+
+    writer.flush()
+    writer.close()

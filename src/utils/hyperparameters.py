@@ -5,10 +5,10 @@ holdout_fold = .15
 unseen_fold = .5
 
 # modeling
-nepochs = 5
+nepochs = 200
 batch_size = 128
 val_batch_size = batch_size * 8
-lr = 0.0005
+lr = 0.0001
 num_heads = 2
 num_enc_layers = 2
 max_seq = 100
