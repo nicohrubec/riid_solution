@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import roc_auc_score
 import datetime
+from tqdm import tqdm
 
 import torch
 import torch.nn as nn
@@ -19,7 +20,7 @@ def train_epoch(model, loader, optimizer, device, criterion):
     model.train()
     train_loss = 0.0
 
-    for i, (history, sample, positions, target, mask) in enumerate(loader):
+    for i, (history, sample, positions, target, mask) in enumerate(tqdm(loader)):
         history, sample, positions, target, mask = \
             history.to(device), sample.to(device), positions.to(device), target.to(device), mask.to(device)
         optimizer.zero_grad()
@@ -42,7 +43,7 @@ def validate(model, loader, device, criterion):
     val_targets = []
 
     with torch.no_grad():
-        for i, (history, sample, positions, target, mask) in enumerate(loader):
+        for i, (history, sample, positions, target, mask) in enumerate(tqdm(loader)):
             history, sample, positions, target, mask = \
                 history.to(device), sample.to(device), positions.to(device), target.to(device), mask.to(device)
 
@@ -79,8 +80,8 @@ def train_transformer_fold(fold):
     train_set = TransformerDataset(trn_group)
     val_set = TransformerDataset(val_group)
 
-    train_loader = DataLoader(train_set, batch_size=hp.batch_size, shuffle=True)
-    val_loader = DataLoader(val_set, batch_size=hp.val_batch_size, shuffle=False)
+    train_loader = DataLoader(train_set, batch_size=hp.batch_size, shuffle=True, num_workers=4, pin_memory=True)
+    val_loader = DataLoader(val_set, batch_size=hp.val_batch_size, shuffle=False, num_workers=4, pin_memory=True)
 
     criterion = nn.BCEWithLogitsLoss()
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -107,7 +108,7 @@ def train_transformer_fold(fold):
         writer.add_scalar("Train loss", loss, epoch)
         writer.add_scalar("Val loss", val_loss, epoch)
         writer.add_scalar("Val auc", val_auc, epoch)
-        
+
         print("Train loss: {:5.5f}".format(loss))
         print("Val loss: {:5.5f}    Val auc: {:4.4f}".format(val_loss, val_auc))
 

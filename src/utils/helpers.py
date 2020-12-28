@@ -53,7 +53,8 @@ def load_base_features(fold, mode, tail=False, full=False):
                          'task_container_id': 'int16',
                          'user_answer': 'int8',
                          'part': 'int8'
-                     })[:10000]
+                     })
+    if mode == 'train': df = df[:100000]
 
     del df['content_type_id']
     del df['tags']

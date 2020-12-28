@@ -9,15 +9,21 @@ do_train_lgb = False
 do_train_transformer = True
 do_inference = False
 
-if do_merge:
-    merge.merge_all()
-if do_fold_split:
-    split.split_to_folds()
-if do_val_split:
-    split.split_fold(0)
-if do_train_lgb:
-    train_lgb.train_lgb_fold(0)
-if do_train_transformer:
-    train_transformer.train_transformer_fold(0)
-if do_inference:
-    infer_lgb.infer_lgb(0)
+
+def main():
+    if do_merge:
+        merge.merge_all()
+    if do_fold_split:
+        split.split_to_folds()
+    if do_val_split:
+        split.split_fold(0)
+    if do_train_lgb:
+        train_lgb.train_lgb_fold(0)
+    if do_train_transformer:
+        train_transformer.train_transformer_fold(0)
+    if do_inference:
+        infer_lgb.infer_lgb(0)
+
+
+if __name__ == '__main__':
+    main()

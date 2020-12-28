@@ -63,8 +63,8 @@ class TransformerDataset(Dataset):
         mask = np.zeros(self.max_seq, dtype=np.int8)
         mask[:row_id] = 1
 
-        sample_history = torch.from_numpy(sample_history).float()
-        sample = torch.from_numpy(sample).float()
+        sample_history = torch.from_numpy(sample_history)
+        sample = torch.from_numpy(sample)
         position = torch.from_numpy(position).long()
         mask = torch.from_numpy(mask).bool()
 
