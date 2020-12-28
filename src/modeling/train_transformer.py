@@ -88,19 +88,26 @@ def train_transformer_fold(fold):
     optimizer = optim.Adam(model.parameters(), lr=hp.lr)
 
     checkpoint_path = configs.model_dir / 'transformer'
-    best_loss = {'train': np.inf, 'val': np.inf}
+    best_loss = {'train': np.inf, 'val': np.inf, 'val_auc': 0}
     log_dir = configs.log_dir / datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     writer = SummaryWriter(log_dir=log_dir)
 
     for epoch in range(1, hp.nepochs + 1):
         print(f"Train epoch {epoch}")
-        epoch_path = checkpoint_path / f'fold{fold}_epoch{epoch}'
         model, loss = train_epoch(model, train_loader, optimizer, device, criterion)
         val_loss, val_auc = validate(model, val_loader, device, criterion)
 
+        # save best model
+        if val_auc > best_loss['val_auc']:
+            best_loss = {'train': loss, 'val': val_loss, 'val_auc': val_auc}
+            epoch_path = checkpoint_path / f'fold{fold}_epoch{epoch}_{val_auc}.pt'
+            torch.save(model.state_dict(), epoch_path)
+
+        # log losses
         writer.add_scalar("Train loss", loss, epoch)
         writer.add_scalar("Val loss", val_loss, epoch)
         writer.add_scalar("Val auc", val_auc, epoch)
+        
         print("Train loss: {:5.5f}".format(loss))
         print("Val loss: {:5.5f}    Val auc: {:4.4f}".format(val_loss, val_auc))
 
