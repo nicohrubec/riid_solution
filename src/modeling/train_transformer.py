@@ -66,13 +66,14 @@ def train_transformer_fold(fold):
     xtrn, ytrn = helpers.load_base_features(fold, mode='train')
     xval, yval = helpers.load_base_features(fold, mode='val')
     n_questions = max(xtrn.content_id.max(), xval.content_id.max())
+    n_parts = max(xtrn.part.max(), xval.part.max())
 
     # group by users
-    trn_group = xtrn[['user_id', 'content_id', 'answered_correctly']].groupby('user_id').apply(
-        lambda r: (r['content_id'].values, r['answered_correctly'].values)
+    trn_group = xtrn[['user_id', 'content_id', 'answered_correctly', 'part']].groupby('user_id').apply(
+        lambda r: (r['content_id'].values, r['answered_correctly'].values, r['part'].values)
     )
-    val_group = xval[['user_id', 'content_id', 'answered_correctly']].groupby('user_id').apply(
-        lambda r: (r['content_id'].values, r['answered_correctly'].values)
+    val_group = xval[['user_id', 'content_id', 'answered_correctly', 'part']].groupby('user_id').apply(
+        lambda r: (r['content_id'].values, r['answered_correctly'].values, r['part'].values)
     )
     del xtrn, ytrn, xval, yval
 
@@ -85,7 +86,7 @@ def train_transformer_fold(fold):
 
     criterion = nn.BCEWithLogitsLoss()
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    model = Transformer(n_questions, hp.max_seq).to(device)
+    model = Transformer(n_questions, hp.max_seq, n_parts).to(device)
     optimizer = optim.Adam(model.parameters(), lr=hp.lr)
 
     checkpoint_path = configs.model_dir / 'transformer'

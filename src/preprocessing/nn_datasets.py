@@ -6,7 +6,7 @@ from src.utils import hyperparameters as hp
 
 
 class TransformerDataset(Dataset):
-    def __init__(self, group, max_seq=hp.max_seq, num_feats=2):
+    def __init__(self, group, max_seq=hp.max_seq, num_feats=3):
         super(TransformerDataset, self).__init__()
         self.max_seq = max_seq
         self.samples = {}
@@ -16,13 +16,14 @@ class TransformerDataset(Dataset):
 
         for user in self.group.index:
             # get features for user
-            user_q, user_a = self.group[user]
+            user_q, user_a, user_p = self.group[user]
             user_seq_len = len(user_q)
             user_seq = np.zeros((self.num_feats, user_seq_len), dtype=np.float32)
 
             # assign feats to user array and master user list
             user_seq[0] = user_a
             user_seq[1] = user_q
+            user_seq[2] = user_p
             self.samples[user] = user_seq
 
             # get master user id list for sampling
