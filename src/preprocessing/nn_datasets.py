@@ -2,9 +2,11 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 
+from src.utils import hyperparameters as hp
+
 
 class TransformerDataset(Dataset):
-    def __init__(self, group, max_seq=100, num_feats=2):
+    def __init__(self, group, max_seq=hp.max_seq, num_feats=2):
         super(TransformerDataset, self).__init__()
         self.max_seq = max_seq
         self.samples = {}
@@ -53,7 +55,7 @@ class TransformerDataset(Dataset):
         # get user history and sample to be predicted + target for row
         sample_data = self.samples[user][:, :row_id]
         sample_history = np.zeros((self.num_feats, self.max_seq), dtype=np.float32)
-        sample_history[:self.num_feats, :row_id] = sample_data[:, -100:]
+        sample_history[:self.num_feats, :row_id] = sample_data[:, -self.max_seq:]
         position = np.zeros(self.max_seq, dtype=np.int16)
         position[:row_id] = [pos for pos in range(min(self.max_seq, row_id), 0, -1)]
         sample = self.samples[user][1:, row_id]
