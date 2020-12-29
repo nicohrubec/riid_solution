@@ -54,7 +54,7 @@ def load_base_features(fold, mode, tail=False, full=False):
                          'user_answer': 'int8',
                          'part': 'int8'
                      })
-    if mode == 'train': df = df[:1000000]
+    if mode == 'train': df = df[:7000000]
     if mode == 'val': df = df[:1000000]
 
     del df['content_type_id']
