@@ -65,28 +65,34 @@ def train_transformer_fold(fold):
     helpers.set_seed(42)
     xtrn, ytrn = helpers.load_base_features(fold, mode='train', tail=True)
     xval, yval = helpers.load_base_features(fold, mode='val', tail=True)
+
+    # convert timestamp to minutes
+    xtrn['timestamp'] = xtrn['timestamp'] // 60000
+    xval['timestamp'] = xval['timestamp'] // 60000
+
     n_questions = max(xtrn.content_id.max(), xval.content_id.max())
     n_parts = max(xtrn.part.max(), xval.part.max())
 
     # group by users
-    trn_group = xtrn[['user_id', 'content_id', 'answered_correctly', 'part']].groupby('user_id').apply(
-        lambda r: (r['content_id'].values, r['answered_correctly'].values, r['part'].values)
+    trn_group = xtrn[['user_id', 'content_id', 'answered_correctly', 'part', 'timestamp']].groupby('user_id').apply(
+        lambda r: (r['content_id'].values, r['answered_correctly'].values, r['part'].values, r['timestamp'].values)
     )
-    val_group = xval[['user_id', 'content_id', 'answered_correctly', 'part']].groupby('user_id').apply(
-        lambda r: (r['content_id'].values, r['answered_correctly'].values, r['part'].values)
+    val_group = xval[['user_id', 'content_id', 'answered_correctly', 'part', 'timestamp']].groupby('user_id').apply(
+        lambda r: (r['content_id'].values, r['answered_correctly'].values, r['part'].values, r['timestamp'].values)
     )
     del xtrn, ytrn, xval, yval
 
     # prepare sequence data
     train_set = TransformerDataset(trn_group)
     val_set = TransformerDataset(val_group)
+    max_time_lag = max(train_set.get_max_time_lag(), val_set.get_max_time_lag())  # max time lag embedding
 
     train_loader = DataLoader(train_set, batch_size=hp.batch_size, shuffle=True, num_workers=4, pin_memory=True)
     val_loader = DataLoader(val_set, batch_size=hp.val_batch_size, shuffle=False, num_workers=4, pin_memory=True)
 
     criterion = nn.BCEWithLogitsLoss()
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    model = Transformer(n_questions, hp.max_seq, n_parts).to(device)
+    model = Transformer(n_questions, hp.max_seq, n_parts, max_time_lag).to(device)
     optimizer = optim.Adam(model.parameters(), lr=hp.lr)
 
     checkpoint_path = configs.model_dir / 'transformer'
