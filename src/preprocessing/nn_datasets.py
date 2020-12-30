@@ -33,18 +33,6 @@ class TransformerDataset(Dataset):
             user_ids = [str(user) + '_' + str(pos) for pos in range(user_seq_len)]
             self.sample_ids.extend(user_ids)
 
-    # this is called to reset the master sampling list after each epoch
-    def reset_id_list(self):
-        # empty sample ids
-        self.sample_ids = []
-
-        # add id for each user for each row to master id list
-        for user in self.group.index:
-            user_q, user_a = self.group[user]
-            user_seq_len = len(user_q)
-            user_ids = [str(user) + '_' + str(pos) for pos in range(user_seq_len)]
-            self.sample_ids.extend(user_ids)
-
     def __len__(self):
         return len(self.sample_ids)
 
@@ -65,16 +53,12 @@ class TransformerDataset(Dataset):
         sample = self.samples[user][1:, row_id]
         target = self.samples[user][0, row_id]
 
-        # mask not filled entries
-        mask = np.zeros(self.max_seq, dtype=np.int8)
-        mask[:row_id] = 1
-
+        # get torch tensors
         sample_history = torch.from_numpy(sample_history).long()
         sample = torch.from_numpy(sample).long()
         position = torch.from_numpy(position).long()
-        mask = torch.from_numpy(mask).bool()
 
-        return sample_history, sample, position, target, mask
+        return sample_history, sample, position, target
 
     def get_max_time_lag(self):
         return int(self.max_time_lag)

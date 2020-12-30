@@ -20,12 +20,12 @@ def train_epoch(model, loader, optimizer, device, criterion):
     model.train()
     train_loss = 0.0
 
-    for i, (history, sample, positions, target, mask) in enumerate(tqdm(loader)):
-        history, sample, positions, target, mask = \
-            history.to(device), sample.to(device), positions.to(device), target.to(device), mask.to(device)
+    for i, (history, sample, positions, target) in enumerate(tqdm(loader)):
+        history, sample, positions, target = \
+            history.to(device), sample.to(device), positions.to(device), target.to(device)
         optimizer.zero_grad()
 
-        preds = model(history, sample, positions, mask)
+        preds = model(history, sample, positions)
 
         loss = criterion(preds, target)
         loss.backward()
@@ -43,11 +43,11 @@ def validate(model, loader, device, criterion):
     val_targets = []
 
     with torch.no_grad():
-        for i, (history, sample, positions, target, mask) in enumerate(tqdm(loader)):
-            history, sample, positions, target, mask = \
-                history.to(device), sample.to(device), positions.to(device), target.to(device), mask.to(device)
+        for i, (history, sample, positions, target) in enumerate(tqdm(loader)):
+            history, sample, positions, target = \
+                history.to(device), sample.to(device), positions.to(device), target.to(device)
 
-            preds = model(history, sample, positions, mask)
+            preds = model(history, sample, positions)
             loss = criterion(preds, target)
             val_loss += loss.item() / len(loader)
 

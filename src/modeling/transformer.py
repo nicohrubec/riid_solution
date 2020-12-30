@@ -35,7 +35,7 @@ class Transformer(nn.Module):
         self.out1 = nn.Linear(hp.embed_size * 8, hp.embed_size * 8)
         self.out2 = nn.Linear(hp.embed_size * 8, 1)
 
-    def forward(self, history, curr_sample, pos, mask):
+    def forward(self, history, curr_sample, pos):
         # history input
         a_history = self.a_hist_emb(torch.unsqueeze(history[:, 0], 2).float())
         q_history = self.q_hist_emb(history[:, 1])
