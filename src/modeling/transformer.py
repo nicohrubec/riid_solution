@@ -37,10 +37,10 @@ class Transformer(nn.Module):
 
     def forward(self, history, curr_sample, pos, mask):
         # history input
-        a_history = self.a_hist_emb(torch.unsqueeze(history[:, 0], 2))
-        q_history = self.q_hist_emb(history[:, 1].long())
-        p_history = self.p_hist_emb(history[:, 2].long())
-        t_history = self.t_hist_emb(history[:, 3].long())
+        a_history = self.a_hist_emb(torch.unsqueeze(history[:, 0], 2).float())
+        q_history = self.q_hist_emb(history[:, 1])
+        p_history = self.p_hist_emb(history[:, 2])
+        t_history = self.t_hist_emb(history[:, 3])
         pos_history = self.pos_hist_emb(pos)
 
         # assemble history representation
@@ -53,9 +53,9 @@ class Transformer(nn.Module):
         history = self.avgpool(history).squeeze()
 
         # sample input
-        q_sample = self.q_sample_emb(curr_sample[:, 0].long())
-        p_sample = self.p_sample_emb(curr_sample[:, 1].long())
-        t_sample = self.t_sample_emb(curr_sample[:, 2].long())
+        q_sample = self.q_sample_emb(curr_sample[:, 0])
+        p_sample = self.p_sample_emb(curr_sample[:, 1])
+        t_sample = self.t_sample_emb(curr_sample[:, 2])
         sample_emb = self.sample_emb(torch.cat((q_sample, p_sample, t_sample), dim=1))
         # get position embedding?
 
