@@ -63,8 +63,8 @@ def validate(model, loader, device, criterion):
 
 def train_transformer_fold(fold):
     helpers.set_seed(42)
-    xtrn, ytrn = helpers.load_base_features(fold, mode='train')
-    xval, yval = helpers.load_base_features(fold, mode='val')
+    xtrn, ytrn = helpers.load_base_features(fold, mode='train', tail=True)
+    xval, yval = helpers.load_base_features(fold, mode='val', tail=True)
     n_questions = max(xtrn.content_id.max(), xval.content_id.max())
     n_parts = max(xtrn.part.max(), xval.part.max())
 

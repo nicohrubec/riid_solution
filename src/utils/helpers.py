@@ -54,7 +54,6 @@ def load_base_features(fold, mode, tail=False, full=False):
                          'user_answer': 'int8',
                          'part': 'int8'
                      })
-    if mode == 'train': df = df[:1000000]
     if mode == 'val': df = df[:1000000]
 
     del df['content_type_id']
@@ -68,7 +67,7 @@ def load_base_features(fold, mode, tail=False, full=False):
 
     if tail:
         if mode == 'train':
-            df = df.groupby('user_id').tail(1000)
+            df = df.groupby('user_id').tail(100)
             print("Pick user history tails: ", df.shape)
 
     if mode == 'train':
