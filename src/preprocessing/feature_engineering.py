@@ -110,7 +110,7 @@ def update_dicts(row, count_dict, correct_dict, time_dict, last_n_dict):
 
 
 def get_row_values(row, count_dict, correct_dict, time_dict, last_n_dict):
-    feats = np.zeros(19, dtype=np.float32)
+    feats = np.full(19, fill_value=-1, dtype=np.float32)
     user = int(row[0])
     question = int(row[1])
     timestamp = int(row[2])
@@ -128,44 +128,15 @@ def get_row_values(row, count_dict, correct_dict, time_dict, last_n_dict):
         if part in count_dict[user]:
             feats[10] = count_dict[user][part]
             feats[11] = correct_dict[user][part]
-        else:
-            feats[10] = -1
-            feats[11] = -1
 
         for i, p in enumerate([-1, -2, -3, -4, -5, -6, -7]):
             if p in count_dict[user]:
                 feats[12 + i] = correct_dict[user][p] / count_dict[user][p]
-            else:
-                feats[12 + i] = -1
 
         if question in count_dict[user]:  # known question for this user
             feats[2] = count_dict[user][question]
             feats[3] = correct_dict[user][question]
             feats[5] = timestamp - time_dict[user][question]
-        else:  # unknown question for this user
-            feats[2] = 0
-            feats[3] = -1
-            feats[5] = -1
-    else:  # unknown user
-        feats[0] = -1
-        feats[1] = -1
-        feats[2] = -1
-        feats[3] = -1
-        feats[4] = -1
-        feats[5] = -1
-        feats[6] = -1
-        feats[7] = -1
-        feats[8] = -1
-        feats[9] = -1
-        feats[10] = -1
-        feats[11] = -1
-        feats[12] = -1
-        feats[13] = -1
-        feats[14] = -1
-        feats[15] = -1
-        feats[16] = -1
-        feats[17] = -1
-        feats[18] = -1
 
     return feats
 
@@ -215,7 +186,7 @@ def calc_dicts_and_add(df, count_dict=None, correct_dict=None, time_dict=None, l
 
     # init numpy storage for all features
     # [user count, user correct count, user question count, user question correct count]
-    user_feats = np.zeros((len(df), 19), dtype=np.float32)
+    user_feats = np.full((len(df), 19), fill_value=-1, dtype=np.float32)
     prev_row = None
 
     # count_dict = {user: {question_counts, user_overall_count}
