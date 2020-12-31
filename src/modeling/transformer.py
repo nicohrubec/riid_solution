@@ -46,6 +46,7 @@ class Transformer(nn.Module):
         # assemble history representation
         history = torch.cat((a_history, q_history, p_history, t_history), dim=2)
         history = torch.add(history, pos_history)
+        history = F.relu(history)
         history = history.permute(1, 0, 2)
 
         history = self.transformer(history)
@@ -61,7 +62,9 @@ class Transformer(nn.Module):
 
         # head
         out = torch.cat((history, sample_emb), dim=1)
+        out = F.relu(out)
         out = self.out1(out)
+        out = F.relu(out)
         out = self.out2(out)
 
         return out.squeeze()
