@@ -16,7 +16,7 @@ def train_lgb_fold(fold):
              'content_id_target_mean', 'user_count', 'user_correct_mean', 'user_question_count',
              'user_question_correct_mean', 'last_time_user', 'last_time_question_user', 'last_time_user_inter',
              'user_last_n_correct', 'answer1', 'answer2', 'answer3', 'answer4', 'user_last_n_time', 'user_last_n_time2',
-             'user_last_n_time3']
+             'user_last_n_time3', 'user_part_count', 'user_part_correct_mean']
     target = 'answered_correctly'
     xtrn, ytrn = helpers.load_base_features(fold, mode='train')
     xval, yval = helpers.load_base_features(fold, mode='val')

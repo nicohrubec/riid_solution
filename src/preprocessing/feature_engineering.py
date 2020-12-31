@@ -60,7 +60,8 @@ def update_dicts(row, count_dict, correct_dict, time_dict, last_n_dict):
     user = int(row[0])
     question = int(row[1])
     timestamp = int(row[2])
-    correct = int(row[3])
+    part = int(-row[3])
+    correct = int(row[4])
 
     if user in count_dict:  # known user
         count_dict[user]['sum'] += 1
@@ -79,6 +80,15 @@ def update_dicts(row, count_dict, correct_dict, time_dict, last_n_dict):
         last_n_dict[user]['time_sum2'] = last_n_dict[user]['last_n_time'][9]
         last_n_dict[user]['time_sum3'] = last_n_dict[user]['last_n_time'][14]
 
+        # update part specific features
+        if part in count_dict[user]:
+            count_dict[user][part] += 1
+            correct_dict[user][part] += correct
+        else:
+            count_dict[user][part] = 1
+            correct_dict[user][part] = correct
+
+        # update question specific features
         if question in count_dict[user]:  # known question for this user
             count_dict[user][question] += 1
             correct_dict[user][question] += correct
@@ -87,9 +97,10 @@ def update_dicts(row, count_dict, correct_dict, time_dict, last_n_dict):
             count_dict[user][question] = 1
             correct_dict[user][question] = correct
             time_dict[user][question] = timestamp
+
     else:  # unknown user
-        count_dict[user] = {'sum': 1, question: 1}
-        correct_dict[user] = {'sum': correct, question: correct}
+        count_dict[user] = {'sum': 1, question: 1, part: 1}
+        correct_dict[user] = {'sum': correct, question: correct, part: correct}
         time_dict[user] = {'last': timestamp, question: timestamp}
         last_n_dict[user] = {'sum': correct, 'time_sum': 0, 'time_sum2': 0, 'time_sum3': 0,
                              'last_n': [0, 0, 0, 0, correct],
@@ -99,10 +110,11 @@ def update_dicts(row, count_dict, correct_dict, time_dict, last_n_dict):
 
 
 def get_row_values(row, count_dict, correct_dict, time_dict, last_n_dict):
-    feats = np.zeros(10, dtype=np.float32)
+    feats = np.zeros(12, dtype=np.float32)
     user = int(row[0])
     question = int(row[1])
     timestamp = int(row[2])
+    part = int(-row[3])
 
     if user in count_dict:  # known user
         feats[0] = count_dict[user]['sum']
@@ -112,6 +124,13 @@ def get_row_values(row, count_dict, correct_dict, time_dict, last_n_dict):
         feats[7] = timestamp - last_n_dict[user]['time_sum']
         feats[8] = timestamp - last_n_dict[user]['time_sum2']
         feats[9] = timestamp - last_n_dict[user]['time_sum3']
+
+        if part in count_dict[user]:
+            feats[10] = count_dict[user][part]
+            feats[11] = correct_dict[user][part]
+        else:
+            feats[10] = -1
+            feats[11] = -1
 
         if question in count_dict[user]:  # known question for this user
             feats[2] = count_dict[user][question]
@@ -132,6 +151,8 @@ def get_row_values(row, count_dict, correct_dict, time_dict, last_n_dict):
         feats[7] = -1
         feats[8] = -1
         feats[9] = -1
+        feats[10] = -1
+        feats[11] = -1
 
     return feats
 
@@ -140,6 +161,7 @@ def calc_feats_from_stats(df, user_feats):
     # assign computed features to new columns in the df
     user_feats[:, 1] = user_feats[:, 1] / user_feats[:, 0]
     user_feats[:, 3] = user_feats[:, 3] / user_feats[:, 2]
+    user_feats[:, 11] = user_feats[:, 11] / user_feats[:, 10]
 
     df['user_count'] = user_feats[:, 0].astype(np.float32)
     df['user_correct_mean'] = user_feats[:, 1].astype(np.float32)
@@ -154,6 +176,8 @@ def calc_feats_from_stats(df, user_feats):
     df['user_last_n_time'] = user_feats[:, 7].astype(np.float32)
     df['user_last_n_time2'] = user_feats[:, 8].astype(np.float32)
     df['user_last_n_time3'] = user_feats[:, 9].astype(np.float32)
+    df['user_part_count'] = user_feats[:, 10].astype(np.float32)
+    df['user_part_correct_mean'] = user_feats[:, 11].astype(np.float32)
 
     return df
 
@@ -171,13 +195,14 @@ def calc_dicts_and_add(df, count_dict=None, correct_dict=None, time_dict=None, l
 
     # init numpy storage for all features
     # [user count, user correct count, user question count, user question correct count]
-    user_feats = np.zeros((len(df), 10), dtype=np.float32)
+    user_feats = np.zeros((len(df), 12), dtype=np.float32)
     prev_row = None
 
     # count_dict = {user: {question_counts, user_overall_count}
     # correct_dict = {user: {question_correct counts, user_overall correct_count}}
 
-    for row_id, curr_row in enumerate(tqdm(df[['user_id', 'content_id', 'timestamp', 'answered_correctly']].values)):
+    for row_id, curr_row in enumerate(
+            tqdm(df[['user_id', 'content_id', 'timestamp', 'part', 'answered_correctly']].values)):
         if prev_row is not None:
             # increment user information
             count_dict, correct_dict, time_dict, last_n_dict = update_dicts(prev_row, count_dict, correct_dict,
