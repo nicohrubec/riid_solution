@@ -23,7 +23,7 @@ def filter_train(df, fold):
     return df
 
 
-def load_base_features(fold, mode, tail=False, full=False):
+def load_base_features(fold, mode, tail=False, full=True, save_pkl=True):
     if mode == 'train':
         if not full:
             fold_path = configs.data_dir / 'fold{}_train.csv'.format(fold)
@@ -48,6 +48,11 @@ def load_base_features(fold, mode, tail=False, full=False):
 
     del df['content_type_id']
     del df['tags']
+
+    if save_pkl:
+        if mode == 'train':
+            print("Pickle training file ...")
+            df.to_pickle(configs.all_data_file_pkl)
 
     print("Load {}: ".format(mode), df.shape)
     print(df.shape)
