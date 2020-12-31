@@ -21,6 +21,7 @@ def train_lgb_fold(fold):
     target = 'answered_correctly'
     xtrn, ytrn = helpers.load_base_features(fold, mode='train')
     xval, yval = helpers.load_base_features(fold, mode='val')
+    xtrn, ytrn = xtrn[:80000000], ytrn[:80000000]
 
     # get features
     xtrn, xval = feature_engineering.get_global_stats(xtrn, xval, target)

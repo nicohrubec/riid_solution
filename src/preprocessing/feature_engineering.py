@@ -191,9 +191,12 @@ def calc_dicts_and_add(df, count_dict=None, correct_dict=None, time_dict=None, l
 
     # count_dict = {user: {question_counts, user_overall_count}
     # correct_dict = {user: {question_correct counts, user_overall correct_count}}
+    feat_iterator = df[['user_id', 'content_id', 'timestamp', 'part', 'answered_correctly']].values
+    del df['timestamp']
+    del df['user_id']
+    del df['row_id']
 
-    for row_id, curr_row in enumerate(
-            tqdm(df[['user_id', 'content_id', 'timestamp', 'part', 'answered_correctly']].values)):
+    for row_id, curr_row in enumerate(tqdm(feat_iterator)):
         if prev_row is not None:
             # increment user information
             count_dict, correct_dict, time_dict, last_n_dict = update_dicts(prev_row, count_dict, correct_dict,
@@ -205,10 +208,8 @@ def calc_dicts_and_add(df, count_dict=None, correct_dict=None, time_dict=None, l
 
         prev_row = curr_row
 
-    del df['timestamp']
-    del df['user_id']
-    del df['row_id']
     # calculate and add features from preprocessed stat dicts
+    del feat_iterator
     df = calc_feats_from_stats(df, user_feats)
 
     return df, count_dict, correct_dict, time_dict, last_n_dict
