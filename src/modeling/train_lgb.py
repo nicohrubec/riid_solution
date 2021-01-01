@@ -29,7 +29,7 @@ def train_lgb_fold(fold):
     xtrn, xval = feature_engineering.get_user_feats(xtrn, xval)
 
     # train model on single fold
-    model = train(xtrn, ytrn, xval, yval, feats)
+    model = train(xtrn, ytrn, xval, yval, feats, plot=False)
 
     # save to disk
     path = configs.model_dir / 'lgb_fold{}.dat'.format(fold)
@@ -37,8 +37,13 @@ def train_lgb_fold(fold):
 
 
 def train(xtrain, ytrain, xval, yval, feats, plot=False):
-    xtrain = xtrain[feats].values.astype(np.float32)
-    xval = xval[feats].values.astype(np.float32)
+    if plot:
+        xtrain = xtrain[feats]
+        xval = xval[feats]
+    else:
+        xtrain = xtrain[feats].values.astype(np.float32)
+        xval = xval[feats].values.astype(np.float32)
+
     lgb_train = lgb.Dataset(xtrain, ytrain)
     lgb_valid = lgb.Dataset(xval, yval)
 
@@ -57,6 +62,9 @@ def train(xtrain, ytrain, xval, yval, feats, plot=False):
     # show feature importances
     if plot:
         _ = lgb.plot_importance(model)
+        plt.show()
+
+        _ = lgb.plot_importance(model, importance_type='gain')
         plt.show()
 
     return model
