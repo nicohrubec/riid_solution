@@ -38,12 +38,6 @@ def merge_feat_val(key_feat, feat_dict):
 
 
 def get_global_stats(trn, val, target, save_dicts=False):
-    trn['task_container_eq1'] = trn.groupby('user_id')['task_container_id'].diff()
-    trn['task_container_eq2'] = trn.groupby('user_id')['task_container_id'].diff(periods=2)
-
-    val['task_container_eq1'] = val.groupby('user_id')['task_container_id'].diff()
-    val['task_container_eq2'] = val.groupby('user_id')['task_container_id'].diff(periods=2)
-
     # compute stats merge on train and obtain state dicts for test merge
     trn, content_dict = get_and_merge_feat(trn, target, 'content_id')
     # trn, part_dict = get_and_merge_feat(trn, target, 'part')
@@ -67,12 +61,15 @@ def update_dicts(row, count_dict, correct_dict, time_dict, last_n_dict):
     question = int(row[1])
     timestamp = int(row[2])
     part = int(-row[3])
-    correct = int(row[4])
+    task_id = row[4]
+    correct = int(row[5])
 
     if user in count_dict:  # known user
         count_dict[user]['sum'] += 1
         correct_dict[user]['sum'] += correct
         time_dict[user]['last'] = timestamp
+        last_n_dict[user]['last_task2'] = last_n_dict[user]['last_task']
+        last_n_dict[user]['last_task'] = task_id
 
         # update rolling answered correct for user
         last_n_dict[user]['last_n'].append(correct)
@@ -109,18 +106,19 @@ def update_dicts(row, count_dict, correct_dict, time_dict, last_n_dict):
         correct_dict[user] = {'sum': correct, question: correct, part: correct}
         time_dict[user] = {'last': timestamp, question: timestamp}
         last_n_dict[user] = {'sum': correct, 'time_sum': 0, 'time_sum2': 0, 'time_sum3': 0,
-                             'last_n': [0, 0, 0, 0, correct],
+                             'last_n': [0, 0, 0, 0, correct], 'last_task': task_id, 'last_task2': np.nan,
                              'last_n_time': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, timestamp]}
 
     return count_dict, correct_dict, time_dict, last_n_dict
 
 
 def get_row_values(row, count_dict, correct_dict, time_dict, last_n_dict):
-    feats = np.full(19, fill_value=-1, dtype=np.float32)
+    feats = np.full(21, fill_value=-1, dtype=np.float32)
     user = int(row[0])
     question = int(row[1])
     timestamp = int(row[2])
     part = int(-row[3])
+    task_id = int(row[4])
 
     if user in count_dict:  # known user
         feats[0] = count_dict[user]['sum']
@@ -130,6 +128,8 @@ def get_row_values(row, count_dict, correct_dict, time_dict, last_n_dict):
         feats[7] = timestamp - last_n_dict[user]['time_sum']
         feats[8] = timestamp - last_n_dict[user]['time_sum2']
         feats[9] = timestamp - last_n_dict[user]['time_sum3']
+        feats[19] = task_id - last_n_dict[user]['last_task']
+        feats[20] = task_id - last_n_dict[user]['last_task2']
 
         if part in count_dict[user]:
             feats[10] = count_dict[user][part]
@@ -143,6 +143,9 @@ def get_row_values(row, count_dict, correct_dict, time_dict, last_n_dict):
             feats[2] = count_dict[user][question]
             feats[3] = correct_dict[user][question]
             feats[5] = timestamp - time_dict[user][question]
+    else:
+        feats[19] = np.nan
+        feats[20] = np.nan
 
     return feats
 
@@ -175,6 +178,8 @@ def calc_feats_from_stats(df, user_feats):
     df['user_part5_mean'] = user_feats[:, 16].astype(np.float32)
     df['user_part6_mean'] = user_feats[:, 17].astype(np.float32)
     df['user_part7_mean'] = user_feats[:, 18].astype(np.float32)
+    df['task_container_eq1'] = user_feats[:, 19].astype(np.float32)
+    df['task_container_eq2'] = user_feats[:, 20].astype(np.float32)
 
     return df
 
@@ -192,12 +197,12 @@ def calc_dicts_and_add(df, count_dict=None, correct_dict=None, time_dict=None, l
 
     # init numpy storage for all features
     # [user count, user correct count, user question count, user question correct count]
-    user_feats = np.full((len(df), 19), fill_value=-1, dtype=np.float32)
+    user_feats = np.full((len(df), 21), fill_value=-1, dtype=np.float32)
     prev_row = None
 
     # count_dict = {user: {question_counts, user_overall_count}
     # correct_dict = {user: {question_correct counts, user_overall correct_count}}
-    feat_iterator = df[['user_id', 'content_id', 'timestamp', 'part', 'answered_correctly']].values
+    feat_iterator = df[['user_id', 'content_id', 'timestamp', 'part', 'task_container_id', 'answered_correctly']].values
     del df['timestamp']
     del df['user_id']
     del df['row_id']
