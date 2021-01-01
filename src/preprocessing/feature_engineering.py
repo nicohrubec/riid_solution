@@ -38,6 +38,12 @@ def merge_feat_val(key_feat, feat_dict):
 
 
 def get_global_stats(trn, val, target, save_dicts=False):
+    trn['task_container_eq1'] = trn.groupby('user_id')['task_container_id'].diff()
+    trn['task_container_eq2'] = trn.groupby('user_id')['task_container_id'].diff(periods=2)
+
+    val['task_container_eq1'] = val.groupby('user_id')['task_container_id'].diff()
+    val['task_container_eq2'] = val.groupby('user_id')['task_container_id'].diff(periods=2)
+
     # compute stats merge on train and obtain state dicts for test merge
     trn, content_dict = get_and_merge_feat(trn, target, 'content_id')
     # trn, part_dict = get_and_merge_feat(trn, target, 'part')
