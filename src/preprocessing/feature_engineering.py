@@ -37,6 +37,16 @@ def merge_feat_val(key_feat, feat_dict):
     return add_feat
 
 
+def get_q_hardness_bins(df):
+    df['question_hardness'] = 0
+    df.question_hardness.values[df.content_id_target_mean >= 0.9] = -10  # very easy
+    df.question_hardness.values[(df.content_id_target_mean >= 0.7) & (df.content_id_target_mean < 0.9)] = -11  # easier
+    df.question_hardness.values[(df.content_id_target_mean >= 0.5) & (df.content_id_target_mean < 0.7)] = -12  # harder
+    df.question_hardness.values[df.content_id_target_mean < 0.5] = -13  # hard
+
+    return df
+
+
 def get_global_stats(trn, val, target, save_dicts=False):
     # compute stats merge on train and obtain state dicts for test merge
     trn, content_dict = get_and_merge_feat(trn, target, 'content_id')
@@ -47,6 +57,10 @@ def get_global_stats(trn, val, target, save_dicts=False):
     val['content_id_target_mean'] = merge_feat_val(val['content_id'], content_dict)
     # val['part_target_mean'] = merge_feat_val(val['part'], part_dict)
     # val['task_container_id_target_mean'] = merge_feat_val(val['task_container_id'], task_dict)
+
+    # question hardness bins
+    trn = get_q_hardness_bins(trn)
+    val = get_q_hardness_bins(val)
 
     if save_dicts:
         print("Save content dict ...")
@@ -61,8 +75,9 @@ def update_dicts(row, count_dict, correct_dict, time_dict, last_n_dict):
     question = int(row[1])
     timestamp = int(row[2])
     part = int(-row[3])
-    task_id = row[4]
-    correct = int(row[5])
+    task_id = int(row[4])
+    hardness = int(row[5])
+    correct = int(row[6])
 
     if user in count_dict:  # known user
         count_dict[user]['sum'] += 1
@@ -83,6 +98,14 @@ def update_dicts(row, count_dict, correct_dict, time_dict, last_n_dict):
         last_n_dict[user]['time_sum2'] = last_n_dict[user]['last_n_time'][9]
         last_n_dict[user]['time_sum3'] = last_n_dict[user]['last_n_time'][14]
 
+        # update hardness specific features
+        if hardness in count_dict[user]:
+            count_dict[user][hardness] += 1
+            correct_dict[user][hardness] += correct
+        else:
+            count_dict[user][hardness] = 1
+            correct_dict[user][hardness] = correct
+
         # update part specific features
         if part in count_dict[user]:
             count_dict[user][part] += 1
@@ -102,8 +125,8 @@ def update_dicts(row, count_dict, correct_dict, time_dict, last_n_dict):
             time_dict[user][question] = timestamp
 
     else:  # unknown user
-        count_dict[user] = {'sum': 1, question: 1, part: 1}
-        correct_dict[user] = {'sum': correct, question: correct, part: correct}
+        count_dict[user] = {'sum': 1, question: 1, part: 1, hardness: 1}
+        correct_dict[user] = {'sum': correct, question: correct, part: correct, hardness: correct}
         time_dict[user] = {'last': timestamp, question: timestamp}
         last_n_dict[user] = {'sum': correct, 'time_sum': 0, 'time_sum2': 0, 'time_sum3': 0,
                              'last_n': [0, 0, 0, 0, correct], 'last_task': task_id, 'last_task2': np.nan,
@@ -113,12 +136,13 @@ def update_dicts(row, count_dict, correct_dict, time_dict, last_n_dict):
 
 
 def get_row_values(row, count_dict, correct_dict, time_dict, last_n_dict):
-    feats = np.full(21, fill_value=np.nan, dtype=np.float32)
+    feats = np.full(23, fill_value=np.nan, dtype=np.float32)
     user = int(row[0])
     question = int(row[1])
     timestamp = int(row[2])
     part = int(-row[3])
     task_id = int(row[4])
+    hardness = int(row[5])
 
     if user in count_dict:  # known user
         feats[0] = count_dict[user]['sum']
@@ -130,6 +154,10 @@ def get_row_values(row, count_dict, correct_dict, time_dict, last_n_dict):
         feats[9] = timestamp - last_n_dict[user]['time_sum3']
         feats[19] = task_id - last_n_dict[user]['last_task']
         feats[20] = task_id - last_n_dict[user]['last_task2']
+
+        if hardness in count_dict[user]:
+            feats[21] = count_dict[user][hardness]
+            feats[22] = correct_dict[user][hardness]
 
         if part in count_dict[user]:
             feats[10] = count_dict[user][part]
@@ -152,6 +180,7 @@ def calc_feats_from_stats(df, user_feats):
     user_feats[:, 1] = user_feats[:, 1] / user_feats[:, 0]
     user_feats[:, 3] = user_feats[:, 3] / user_feats[:, 2]
     user_feats[:, 11] = user_feats[:, 11] / user_feats[:, 10]
+    user_feats[:, 22] = user_feats[:, 22] / user_feats[:, 21]
 
     df['user_count'] = user_feats[:, 0].astype(np.float32)
     df['user_correct_mean'] = user_feats[:, 1].astype(np.float32)
@@ -177,6 +206,9 @@ def calc_feats_from_stats(df, user_feats):
     df['user_part7_mean'] = user_feats[:, 18].astype(np.float32)
     df['task_container_eq1'] = user_feats[:, 19].astype(np.float32)
     df['task_container_eq2'] = user_feats[:, 20].astype(np.float32)
+    df['user_hardness_count'] = user_feats[:, 21].astype(np.float32)
+    df['user_hardness_mean'] = user_feats[:, 22].astype(np.float32)
+    df['user_hardness_inter'] = df['user_hardness_mean'] - df['content_id_target_mean']
 
     return df
 
@@ -194,12 +226,13 @@ def calc_dicts_and_add(df, count_dict=None, correct_dict=None, time_dict=None, l
 
     # init numpy storage for all features
     # [user count, user correct count, user question count, user question correct count]
-    user_feats = np.full((len(df), 21), fill_value=np.nan, dtype=np.float32)
+    user_feats = np.full((len(df), 23), fill_value=np.nan, dtype=np.float32)
     prev_row = None
 
     # count_dict = {user: {question_counts, user_overall_count}
     # correct_dict = {user: {question_correct counts, user_overall correct_count}}
-    feat_iterator = df[['user_id', 'content_id', 'timestamp', 'part', 'task_container_id', 'answered_correctly']].values
+    feat_iterator = df[['user_id', 'content_id', 'timestamp', 'part', 'task_container_id', 'question_hardness',
+                        'answered_correctly']].values
     del df['timestamp']
     del df['user_id']
     del df['row_id']
