@@ -43,11 +43,15 @@ def train_fold(fold, model_type):
 
 
 def train_cat(xtrain, ytrain, xval, yval, feats):
-    xtrain = xtrain[feats]
-    xval = xval[feats]
+    xtrain = xtrain[feats].astype(np.float32)
+    xval = xval[feats].astype(np.float32)
     cat_cols = ['content_id', 'task_container_id', 'part']
 
-    model = CatBoostClassifier(iterations=10000,
+    for col in cat_cols:
+        xtrain[col] = xtrain[col].astype(np.int16)
+        xval[col] = xval[col].astype(np.int16)
+
+    model = CatBoostClassifier(iterations=4000,
                                learning_rate=0.02,
                                thread_count=4,
                                depth=6,
@@ -59,7 +63,8 @@ def train_cat(xtrain, ytrain, xval, yval, feats):
                                metric_period=100,
                                od_type='Iter',
                                od_wait=50,
-                               random_seed=0)
+                               random_seed=0,
+                               task_type='GPU')
 
     model.fit(xtrain, ytrain,
               eval_set=(xval, yval),
