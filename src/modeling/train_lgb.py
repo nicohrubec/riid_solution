@@ -45,11 +45,12 @@ def train_fold(fold, model_type):
     elif model_type == 'cat':
         model = train_cat(xtrn, ytrn, xval, yval, feats)
     elif model_type == 'nn':
-        model = train_nn(xtrn, ytrn, xval, yval, feats)
+        train_nn(xtrn, ytrn, xval, yval, feats)
 
     # save to disk
-    path = configs.model_dir / '{}_fold{}.dat'.format(model_type, fold)
-    pickle.dump(model, open(path, "wb"))
+    if model_type in ['cat', 'lgb']:
+        path = configs.model_dir / '{}_fold{}.dat'.format(model_type, fold)
+        pickle.dump(model, open(path, "wb"))
 
 
 def train_cat(xtrain, ytrain, xval, yval, feats):
@@ -127,7 +128,7 @@ def validate(model, loader, device, criterion):
         val_targets = np.concatenate(val_targets)
         val_auc = roc_auc_score(val_targets, val_preds)
 
-    return val_loss, val_auc
+    return val_loss, val_auc, val_preds
 
 
 def train_nn(xtrain, ytrain, xval, yval, feats):
@@ -146,7 +147,7 @@ def train_nn(xtrain, ytrain, xval, yval, feats):
     model = nn_model.RiidModel(len(feats)).to(device)
     criterion = nn.BCEWithLogitsLoss()
     optimizer = optim.Adam(model.parameters(), lr=hp.lr)
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5, eps=1e-4,
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=2, eps=1e-4,
                                                      verbose=True)
     checkpoint_path = configs.model_dir / 'nn'
     best_loss = {'train': np.inf, 'val': np.inf, 'val_auc': 0}
@@ -156,7 +157,7 @@ def train_nn(xtrain, ytrain, xval, yval, feats):
     for epoch in range(1, hp.nepochs + 1):
         print(f"Train epoch {epoch}")
         model, loss = train_epoch(model, train_loader, optimizer, device, criterion)
-        val_loss, val_auc = validate(model, val_loader, device, criterion)
+        val_loss, val_auc, val_preds = validate(model, val_loader, device, criterion)
 
         # save best model
         if val_auc > best_loss['val_auc']:
@@ -164,10 +165,15 @@ def train_nn(xtrain, ytrain, xval, yval, feats):
             epoch_path = checkpoint_path / f'epoch{epoch}_{val_auc}.pt'
             torch.save(model.state_dict(), epoch_path)
 
+            # save best oof predictions
+            oof_path = configs.oof_dir / f'oof_nn_{val_auc}.npy'
+            np.save(oof_path, val_preds)
+
         # log losses
         writer.add_scalar("Train loss", loss, epoch)
         writer.add_scalar("Val loss", val_loss, epoch)
         writer.add_scalar("Val auc", val_auc, epoch)
+        scheduler.step(val_auc)
 
         print("Train loss: {:5.5f}".format(loss))
         print("Val loss: {:5.5f}    Val auc: {:4.4f}".format(val_loss, val_auc))
