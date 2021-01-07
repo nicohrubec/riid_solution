@@ -3,16 +3,24 @@ import pickle
 import lightgbm as lgb
 import matplotlib.pyplot as plt
 import numpy as np
+import datetime
 from sklearn.metrics import roc_auc_score
 from catboost import CatBoostClassifier
+import torch
+import torch.nn as nn
+from torch.utils.data import DataLoader
+import torch.optim as optim
+from torch.utils.tensorboard import SummaryWriter
+from tqdm import tqdm
 
-from src.preprocessing import feature_engineering
-from src.utils import configs
-from src.utils import helpers
+from src.preprocessing import feature_engineering, nn_dataset
+from src.modeling import nn_model
+from src.utils import configs, helpers
+from src.utils import hyperparameters as hp
 
 
 def train_fold(fold, model_type):
-    assert model_type in ['cat', 'lgb']
+    assert model_type in ['cat', 'lgb', 'nn']
     # get base features
     feats = ['content_id', 'task_container_id', 'prior_question_elapsed_time', 'prior_question_had_explanation', 'part',
              'content_id_target_mean', 'user_count', 'user_correct_mean', 'user_question_count',
@@ -36,6 +44,8 @@ def train_fold(fold, model_type):
         model = train_lgb(xtrn, ytrn, xval, yval, feats, plot=False)
     elif model_type == 'cat':
         model = train_cat(xtrn, ytrn, xval, yval, feats)
+    elif model_type == 'nn':
+        model = train_nn(xtrn, ytrn, xval, yval, feats)
 
     # save to disk
     path = configs.model_dir / '{}_fold{}.dat'.format(model_type, fold)
@@ -75,6 +85,97 @@ def train_cat(xtrain, ytrain, xval, yval, feats):
     print('auc:', roc_auc_score(yval, preds))
 
     return model
+
+
+def train_epoch(model, loader, optimizer, device, criterion):
+    model.train()
+    train_loss = 0.0
+
+    for i, (sample, target) in enumerate(tqdm(loader)):
+        sample, target = sample.to(device), target.to(device)
+        optimizer.zero_grad()
+
+        preds = model(sample)
+
+        loss = criterion(preds, target)
+        loss.backward()
+        optimizer.step()
+
+        train_loss += loss.item() / len(loader)
+
+    return model, train_loss
+
+
+def validate(model, loader, device, criterion):
+    model.eval()
+    val_loss = 0.0
+    val_preds = []
+    val_targets = []
+
+    with torch.no_grad():
+        for i, (sample, target) in enumerate(tqdm(loader)):
+            sample, target = sample.to(device), target.to(device)
+
+            preds = model(sample)
+            loss = criterion(preds, target)
+            val_loss += loss.item() / len(loader)
+
+            val_preds.append(preds.cpu())
+            val_targets.append(target.cpu())
+
+        val_preds = np.concatenate(val_preds)
+        val_targets = np.concatenate(val_targets)
+        val_auc = roc_auc_score(val_targets, val_preds)
+
+    return val_loss, val_auc
+
+
+def train_nn(xtrain, ytrain, xval, yval, feats):
+    helpers.set_seed(42)
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+    xtrain, ytrain = xtrain[feats].fillna(-1.0).values.astype(np.float32), ytrain.values
+    xval, yval = xval[feats].fillna(-1.0).values.astype(np.float32), yval.values
+
+    train_set = nn_dataset.RiidDataset(xtrain, ytrain)
+    val_set = nn_dataset.RiidDataset(xval, yval)
+
+    train_loader = DataLoader(train_set, batch_size=hp.batch_size, shuffle=True)
+    val_loader = DataLoader(val_set, batch_size=hp.val_batch_size, shuffle=False)
+
+    model = nn_model.RiidModel(len(feats)).to(device)
+    criterion = nn.BCEWithLogitsLoss()
+    optimizer = optim.Adam(model.parameters(), lr=hp.lr)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5, eps=1e-4,
+                                                     verbose=True)
+    checkpoint_path = configs.model_dir / 'nn'
+    best_loss = {'train': np.inf, 'val': np.inf, 'val_auc': 0}
+    log_dir = configs.log_dir / datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    writer = SummaryWriter(log_dir=log_dir)
+
+    for epoch in range(1, hp.nepochs + 1):
+        print(f"Train epoch {epoch}")
+        model, loss = train_epoch(model, train_loader, optimizer, device, criterion)
+        val_loss, val_auc = validate(model, val_loader, device, criterion)
+
+        # save best model
+        if val_auc > best_loss['val_auc']:
+            best_loss = {'train': loss, 'val': val_loss, 'val_auc': val_auc}
+            epoch_path = checkpoint_path / f'epoch{epoch}_{val_auc}.pt'
+            torch.save(model.state_dict(), epoch_path)
+
+        # log losses
+        writer.add_scalar("Train loss", loss, epoch)
+        writer.add_scalar("Val loss", val_loss, epoch)
+        writer.add_scalar("Val auc", val_auc, epoch)
+
+        print("Train loss: {:5.5f}".format(loss))
+        print("Val loss: {:5.5f}    Val auc: {:4.4f}".format(val_loss, val_auc))
+
+    writer.flush()
+    writer.close()
+
+    # return model
 
 
 def train_lgb(xtrain, ytrain, xval, yval, feats, plot=False):

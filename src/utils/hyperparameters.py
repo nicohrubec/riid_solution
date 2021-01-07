@@ -8,5 +8,6 @@ unseen_fold = .5
 # modeling
 nstarts = 1
 nepochs = 5
-batch_size = 128
+batch_size = 512
 val_batch_size = batch_size * 4
+lr = .001

@@ -6,7 +6,8 @@ do_merge = False
 do_fold_split = False
 do_val_split = False
 do_train_lgb = False
-do_train_cat = True
+do_train_cat = False
+do_train_nn = True
 do_inference = False
 
 if do_merge:
@@ -19,5 +20,7 @@ if do_train_lgb:
     train_lgb.train_fold(0, model_type='lgb')
 if do_train_cat:
     train_lgb.train_fold(0, model_type='cat')
+if do_train_nn:
+    train_lgb.train_fold(0, model_type='nn')
 if do_inference:
     infer_lgb.infer_lgb(0)
