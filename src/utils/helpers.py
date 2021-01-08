@@ -57,6 +57,7 @@ def load_base_features(fold, mode, tail=False, full=False, save_pkl=False):
     del df['content_type_id']
     del df['tags']
 
+    # save df
     if save_pkl:
         if mode == 'train':
             print("Pickle training file ...")
@@ -65,14 +66,17 @@ def load_base_features(fold, mode, tail=False, full=False, save_pkl=False):
     print("Load {}: ".format(mode), df.shape)
     print(df.shape)
 
+    # filter lecture data
     df = df[df.answered_correctly != -1]
     print("Exclude lectures: ", df.shape)
 
+    # use only last n entries for each user
     if tail:
         if mode == 'train':
             df = df.groupby('user_id').tail(1000)
             print("Pick user history tails: ", df.shape)
 
+    # exclude validation data explicitly from training data
     if mode == 'train':
         if full:
             df = filter_train(df, fold=fold)

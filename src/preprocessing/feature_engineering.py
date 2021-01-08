@@ -71,6 +71,7 @@ def get_global_stats(trn, val, target, save_dicts=False):
 
 
 def update_dicts(row, count_dict, correct_dict, time_dict, last_n_dict):
+    # get dictionary keys for each feature
     user = int(row[0])
     question = int(row[1])
     timestamp = int(row[2])
@@ -80,6 +81,7 @@ def update_dicts(row, count_dict, correct_dict, time_dict, last_n_dict):
     correct = int(row[6])
 
     if user in count_dict:  # known user
+        # overall user features
         count_dict[user]['sum'] += 1
         correct_dict[user]['sum'] += correct
         time_dict[user]['last'] = timestamp
@@ -98,7 +100,7 @@ def update_dicts(row, count_dict, correct_dict, time_dict, last_n_dict):
         last_n_dict[user]['time_sum2'] = last_n_dict[user]['last_n_time'][9]
         last_n_dict[user]['time_sum3'] = last_n_dict[user]['last_n_time'][14]
 
-        # update hardness specific features
+        # update question difficulty specific features
         if hardness in count_dict[user]:
             count_dict[user][hardness] += 1
             correct_dict[user][hardness] += correct
@@ -124,7 +126,7 @@ def update_dicts(row, count_dict, correct_dict, time_dict, last_n_dict):
             correct_dict[user][question] = correct
             time_dict[user][question] = timestamp
 
-    else:  # unknown user
+    else:  # unknown user create new entry
         count_dict[user] = {'sum': 1, question: 1, part: 1, hardness: 1}
         correct_dict[user] = {'sum': correct, question: correct, part: correct, hardness: correct}
         time_dict[user] = {'last': timestamp, question: timestamp}
@@ -136,7 +138,9 @@ def update_dicts(row, count_dict, correct_dict, time_dict, last_n_dict):
 
 
 def get_row_values(row, count_dict, correct_dict, time_dict, last_n_dict):
-    feats = np.full(23, fill_value=np.nan, dtype=np.float32)
+    feats = np.full(23, fill_value=np.nan, dtype=np.float32)  # row storage
+
+    # get dictionary keys
     user = int(row[0])
     question = int(row[1])
     timestamp = int(row[2])
@@ -145,6 +149,7 @@ def get_row_values(row, count_dict, correct_dict, time_dict, last_n_dict):
     hardness = int(row[5])
 
     if user in count_dict:  # known user
+        # get overall user specific features
         feats[0] = count_dict[user]['sum']
         feats[1] = correct_dict[user]['sum']
         feats[4] = timestamp - time_dict[user]['last']
@@ -155,18 +160,22 @@ def get_row_values(row, count_dict, correct_dict, time_dict, last_n_dict):
         feats[19] = task_id - last_n_dict[user]['last_task']
         feats[20] = task_id - last_n_dict[user]['last_task2']
 
+        # get question difficulty specific features
         if hardness in count_dict[user]:
             feats[21] = count_dict[user][hardness]
             feats[22] = correct_dict[user][hardness]
 
+        # get part specific features
         if part in count_dict[user]:
             feats[10] = count_dict[user][part]
             feats[11] = correct_dict[user][part]
 
+        # add part features for all other parts as well
         for i, p in enumerate([-1, -2, -3, -4, -5, -6, -7]):
             if p in count_dict[user]:
                 feats[12 + i] = correct_dict[user][p] / count_dict[user][p]
 
+        # add question specific features
         if question in count_dict[user]:  # known question for this user
             feats[2] = count_dict[user][question]
             feats[3] = correct_dict[user][question]
@@ -176,12 +185,13 @@ def get_row_values(row, count_dict, correct_dict, time_dict, last_n_dict):
 
 
 def calc_feats_from_stats(df, user_feats):
-    # assign computed features to new columns in the df
+    # compute correctness means
     user_feats[:, 1] = user_feats[:, 1] / user_feats[:, 0]
     user_feats[:, 3] = user_feats[:, 3] / user_feats[:, 2]
     user_feats[:, 11] = user_feats[:, 11] / user_feats[:, 10]
     user_feats[:, 22] = user_feats[:, 22] / user_feats[:, 21]
 
+    # assign computed features to new columns in the df
     df['user_count'] = user_feats[:, 0].astype(np.float32)
     df['user_correct_mean'] = user_feats[:, 1].astype(np.float32)
     df['user_question_count'] = user_feats[:, 2].astype(np.float32)
@@ -214,7 +224,11 @@ def calc_feats_from_stats(df, user_feats):
 
 
 def calc_dicts_and_add(df, count_dict=None, correct_dict=None, time_dict=None, last_n_dict=None):
-    # init empty dicts if nothing is provided
+    # init empty dicts if nothing is provided else use precomputed dicts
+    # count_dict: user specific counts for questions, parts, question difficulty etc.
+    # correct_dict: user specific counts of correct answers for questions, parts, question difficulty etc.
+    # time dict: last time we saw the user, last time user answered this question etc.
+    # last n dict: last n time user correct, last n time user question correct, last n time seen user etc.
     if not count_dict:
         count_dict = {}
     if not correct_dict:
@@ -224,13 +238,9 @@ def calc_dicts_and_add(df, count_dict=None, correct_dict=None, time_dict=None, l
     if not last_n_dict:
         last_n_dict = {}
 
-    # init numpy storage for all features
-    # [user count, user correct count, user question count, user question correct count]
+    # init numpy storage for all features and create row iterator
     user_feats = np.full((len(df), 23), fill_value=np.nan, dtype=np.float32)
     prev_row = None
-
-    # count_dict = {user: {question_counts, user_overall_count}
-    # correct_dict = {user: {question_correct counts, user_overall correct_count}}
     feat_iterator = df[['user_id', 'content_id', 'timestamp', 'part', 'task_container_id', 'question_hardness',
                         'answered_correctly']].values
     del df['timestamp']
@@ -239,17 +249,17 @@ def calc_dicts_and_add(df, count_dict=None, correct_dict=None, time_dict=None, l
 
     for row_id, curr_row in enumerate(tqdm(feat_iterator)):
         if prev_row is not None:
-            # increment user information
+            # increment user information incrementally with newly gained information (previous row)
             count_dict, correct_dict, time_dict, last_n_dict = update_dicts(prev_row, count_dict, correct_dict,
                                                                             time_dict, last_n_dict)
 
-        # obtain feature values for this row
+        # obtain feature values for current row
         user_row_values = get_row_values(curr_row, count_dict, correct_dict, time_dict, last_n_dict)
         user_feats[row_id] = user_row_values
 
         prev_row = curr_row
 
-    # calculate and add features from preprocessed stat dicts
+    # calculate and add features from preprocessed state dicts to data
     del feat_iterator
     df = calc_feats_from_stats(df, user_feats)
 
@@ -257,7 +267,9 @@ def calc_dicts_and_add(df, count_dict=None, correct_dict=None, time_dict=None, l
 
 
 def get_user_feats(trn, val, save_dicts=False):
+    # build up the feature dicts row wise on train and compute train features
     trn, count_dict, correct_dict, time_dict, last_n_dict = calc_dicts_and_add(trn)
+    # add to precomputed train feature dicts and compute inference features
     val, count_dict, correct_dict, time_dict, last_n_dict = calc_dicts_and_add(val, count_dict, correct_dict,
                                                                                time_dict, last_n_dict)
 
@@ -271,6 +283,9 @@ def get_user_feats(trn, val, save_dicts=False):
         print("Save time dict ...")
         with open(configs.time_dict_path, 'wb') as f:
             pickle.dump(time_dict, f, pickle.HIGHEST_PROTOCOL)
+        print("Save last n dict ...")
+        with open(configs.last_n_dict_path, 'wb') as f:
+            pickle.dump(last_n_dict, f, pickle.HIGHEST_PROTOCOL)
 
     del count_dict, correct_dict, time_dict, last_n_dict
     gc.collect()

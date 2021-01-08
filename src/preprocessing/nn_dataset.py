@@ -3,7 +3,7 @@ import torch.nn as nn
 from torch.utils.data import Dataset
 import numpy as np
 
-
+# Dataset Class for Linear NN
 class RiidDataset(Dataset):
     def __init__(self, df, targets, mode='train'):
         self.mode = mode

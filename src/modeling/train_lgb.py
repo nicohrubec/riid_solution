@@ -35,8 +35,11 @@ def train_fold(fold, model_type, full_data):
     xval, yval = helpers.load_base_features(fold, mode='val', full=full_data)
 
     # get features
+    # get global content mean and bin question difficulty
     xtrn, xval = feature_engineering.get_global_stats(xtrn, xval, target)
+    # get distribution of answers for all students on a given question
     xtrn, xval = feature_engineering.get_answer_feats(xtrn, xval)
+    # get user specific row wise features
     xtrn, xval = feature_engineering.get_user_feats(xtrn, xval)
 
     # train model on single fold
@@ -48,6 +51,7 @@ def train_fold(fold, model_type, full_data):
         train_nn(xtrn, ytrn, xval, yval, feats)
 
     # save to disk
+    # only for gbm because nn state dicts get saved in train_nn already
     if model_type in ['cat', 'lgb']:
         path = configs.model_dir / '{}_fold{}.dat'.format(model_type, fold)
         pickle.dump(model, open(path, "wb"))
