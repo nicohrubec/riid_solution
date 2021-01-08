@@ -149,7 +149,7 @@ def train_nn(xtrain, ytrain, xval, yval, feats):
     optimizer = optim.Adam(model.parameters(), lr=hp.lr)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=2, eps=1e-4,
                                                      verbose=True)
-    checkpoint_path = configs.model_dir / 'nn'
+    checkpoint_path = configs.model_dir
     best_loss = {'train': np.inf, 'val': np.inf, 'val_auc': 0}
     log_dir = configs.log_dir / datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     writer = SummaryWriter(log_dir=log_dir)
