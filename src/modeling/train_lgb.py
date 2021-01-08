@@ -19,7 +19,7 @@ from src.utils import configs, helpers
 from src.utils import hyperparameters as hp
 
 
-def train_fold(fold, model_type):
+def train_fold(fold, model_type, full_data):
     assert model_type in ['cat', 'lgb', 'nn']
     # get base features
     feats = ['content_id', 'task_container_id', 'prior_question_elapsed_time', 'prior_question_had_explanation', 'part',
@@ -31,8 +31,8 @@ def train_fold(fold, model_type):
              'task_container_eq1', 'task_container_eq2',
              'user_hardness_count', 'user_hardness_mean', 'user_hardness_inter']
     target = 'answered_correctly'
-    xtrn, ytrn = helpers.load_base_features(fold, mode='train')
-    xval, yval = helpers.load_base_features(fold, mode='val')
+    xtrn, ytrn = helpers.load_base_features(fold, mode='train', full=full_data)
+    xval, yval = helpers.load_base_features(fold, mode='val', full=full_data)
 
     # get features
     xtrn, xval = feature_engineering.get_global_stats(xtrn, xval, target)
