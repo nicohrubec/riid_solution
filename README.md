@@ -2,6 +2,8 @@
 In this repo you can find the full code to reproduce our CV .7936 / LB .794 single LGB fold solution on Kaggle which results in a 145th rank out of 3406 teams. The task was to predict whether a student will answer a given question correctly. Metric was AUC. Competition page:
 https://www.kaggle.com/c/riiid-test-answer-prediction/overview
 
+The test inference code with on the fly dictionary computation can be found here: https://www.kaggle.com/nicohrubec/single-fold-lgb-794-inference/notebook
+
 ## How to run the code:
 1. Clone the repository.
 2. Create a folder called 'data' and put the competition dataset in the folder. Data can be downloaded from here: https://www.kaggle.com/c/riiid-test-answer-prediction/overview
